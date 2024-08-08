@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image and Video Display</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        #app-container {
+            display: flex;
+            align-items: center;
+        }
+        #media-container {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-right: 2rem;
+        }
+        #buttons-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            grid-gap: 10px;
+        }
+        button {
+            width: 120px;
+            height: 120px;
+            font-size: 24px;
+        }
+        #progress {
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body onload="init()">
+    <div id="app-container">
+        <div id="media-container">
+            <img id="display-image" style="display:none;" />
+            <video id="display-video" style="display:none;" controls autoplay></video>
+        </div>
+<!--        <div id="buttons-container">-->
+<!--            <button onclick="handleButtonClick('q')">Q(上移)</button>-->
+<!--            <button onclick="handleButtonClick('w')">W(前进)</button>-->
+<!--            <button onclick="handleButtonClick('e')">E(下移)</button>-->
+<!--            <button onclick="handleButtonClick('a')" style="grid-row: 2; grid-column: 1;">A(左转)</button>-->
+<!--            <button onclick="handleButtonClick('s')" style="grid-row: 2; grid-column: 2;">S(后退)</button>-->
+<!--            <button onclick="handleButtonClick('d')" style="grid-row: 2; grid-column: 3;">D(右转)</button>-->
+<!--            <button onclick="handleButtonClick('f')" style="grid-row: 2; grid-column: 4;">F(朝下)</button>-->
+<!--            <button onclick="handleButtonClick('z')" style="grid-row: 3; grid-column: 1;">Z(左移)</button>-->
+<!--            <button onclick="handleButtonClick('x')" style="grid-row: 3; grid-column: 2;">X(原点)</button>-->
+<!--            <button onclick="handleButtonClick('c')" style="grid-row: 3; grid-column: 3;">C(右移)</button>-->
+<!--            <button onclick="handleButtonClick('v')" style="grid-row: 3; grid-column: 4;">V(朝上)</button>-->
+<!--        </div>-->
+        <div id="progress" style="display:none;">Progress: <span id="progress-text"></span>%</div>
+    </div>
+
+    <script>
+        let pollInterval;
+        const progressDiv = document.getElementById('progress');
+        const progressText = document.getElementById('progress-text');
+
+        function init() {
+            fetchAndDisplayImage('w');
+            document.addEventListener('keydown', handleKeyDown);
+        }
+
+        function handleKeyDown(event) {
+            const key = event.key.toLowerCase();
+            if (['q', 'w', 'e', 'a', 's', 'd', 'u', 'i', 'o', 'j', 'k', 'l','r'].includes(key)) {
+                handleButtonClick(key);
+            }
+        }
+
+        async function handleButtonClick(buttonType) {
+            await fetchAndDisplayImage(buttonType);
+        }
+
+        async function fetchAndDisplayImage(imageType) {
+            const imageUrl = await fetchImage(`http://172.29.130.190:5000/api/generate-image?type=${imageType}`);
+            document.getElementById('display-video').style.display = 'none';
+            const imageElement = document.getElementById('display-image');
+            imageElement.style.display = 'block';
+            imageElement.src = imageUrl;
+        }
+
+        async function fetchImage(url) {
+            const response = await fetch(url);
+            const blob = await response.blob();
+            const imageUrl = URL.createObjectURL(blob);
+            return imageUrl;
+        }
+
+        async function pollProgress(taskId) {
+          const response = await fetch(`http://172.29.130.190:5000/api/task-status/${taskId}`);
+
+          if (response.ok) {
+            const taskStatus = await response.json();
+
+            if (taskStatus.state === 'PENDING' || taskStatus.state === 'STARTED') {
+              // 使用 setTimeout 为轮询添加一个间隔
+              setTimeout(() => pollProgress(taskId), 10);
+            } else {
+              console.error('Error:', taskStatus);
+            }
+          } else {
+            console.error('Error:', response);
+          }
+        }
+
+
+        async function getProgress(url) {
+            const response = await fetch(url);
+            const data = await response.json();
+            return data.progress;
+        }
+
+        async function displayVideo(videoUrl) {
+            document.getElementById('display-image').style.display = 'none';
+            const videoElement = document.getElementById('display-video');
+            videoElement.style.display = 'block';
+            videoElement.src = videoUrl;
+        }
+    </script>
+</body>
+</html>
